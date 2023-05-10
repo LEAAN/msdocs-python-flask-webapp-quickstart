@@ -3,9 +3,10 @@ import time
 import logging
 import openai
 from azure.identity import DefaultAzureCredential
-# from azure.search.documents import SearchClient
-# from app.chatreadretrieveread import ChatReadRetrieveReadApproach
+import engine.chatreadretrieveread
+from engine.chatreadretrieveread import ChatReadRetrieveReadApproach
 # from azure.storage.blob import BlobServiceClient
+# from azure.search.documents import SearchClient
 
 from flask import (Flask, redirect, render_template, request,
                    send_from_directory, url_for, jsonify)
@@ -57,13 +58,12 @@ def favicon():
 @app.route('/hello', methods=['POST'])
 def hello():
     ensure_openai_token()
-    approach = request.json["approach"]
     try:
-        # impl = chat_approaches.get(approach)
-        # if not impl:
-        #     return jsonify({"error": "unknown approach"}), 400
-        # r = impl.run(request.json["history"], request.json.get("overrides") or {})
-        return jsonify('sth', 200)
+        impl = ChatReadRetrieveReadApproach(AZURE_OPENAI_CHATGPT_DEPLOYMENT, AZURE_OPENAI_GPT_DEPLOYMENT, KB_FIELDS_SOURCEPAGE, KB_FIELDS_CONTENT)
+        r = impl.run()
+        app.logger.info("Request %s", request.json)
+
+        return jsonify(r)
     except Exception as e:
         logging.exception("Exception in /chat")
         return jsonify({"error": str(e)}), 500
@@ -73,7 +73,7 @@ def ensure_openai_token():
     if openai_token.expires_on < int(time.time()) - 60:
         openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
         openai.api_key = openai_token.token
-        app.logger.info("OpenAI token at %s", openai_token)
+        # app.logger.info("OpenAI token at %s", openai_token)
 
 if __name__ == '__main__':
    app.run()
